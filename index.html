@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalTrack Pro</title>
+    <!-- PWA Support -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <style>
+        :root {
+            --primary: #ff4757;
+            --secondary: #2ed573;
+            --accent: #3742fa;
+            --background: #2d3436;
+            --goal: #9b59b6;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .progress-circle {
+            width: 120px;
+            height: 120px;
+            position: relative;
+        }
+
+        .circle-background,
+        .circle-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+        }
+
+        .circle-background {
+            stroke: #404040;
+        }
+
+        .circle-progress {
+            stroke: var(--primary);
+        }
+
+        .goal-circle .circle-progress {
+            stroke: var(--goal);
+        }
+
+        .circle-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: var(--secondary);
+            margin-top: 5px;
+        }
+
+        .input-section {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        select, input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            background: #34495e;
+            color: white;
+        }
+
+        button {
+            background: var(--accent);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .measurement-group {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+        }
+
+        .meal-cards {
+            display: grid;
+            gap: 15px;
+        }
+
+        .meal-card {
+            background: #34495e;
+            padding: 15px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .meal-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .edit-btn { background: #3498db; }
+        .delete-btn { background: #e74c3c; }
+
+        .reset-btn {
+            background: #e74c3c;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 400px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CalTrack</h1>
+            <div class="date-display">Today</div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-circle">
+                <svg viewBox="0 0 100 100">
+                    <circle class="circle-background" cx="50" cy="50" r="45"/>
+                    <circle class="circle-progress" id="consumedCircle" cx="50" cy="50" r="45"/>
+                </svg>
+                <div class="circle-text">
+                    <div class="metric-value" id="consumedKcal">0</div>
+                    <div class="metric-label">CONSUMED</div>
+                </div>
+            </div>
+
+            <div class="progress-circle goal-circle">
+                <svg viewBox="0 0 100 100">
+                    <circle class="circle-background" cx="50" cy="50" r="45"/>
+                    <circle class="circle-progress" cx="50" cy="50" r="45"/>
+                </svg>
+                <div class="circle-text">
+                    <div class="metric-value" id="goalKcal">0</div>
+                    <div class="metric-label">DAILY GOAL</div>
+                </div>
+            </div>
+
+            <div class="progress-circle">
+                <svg viewBox="0 0 100 100">
+                    <circle class="circle-background" cx="50" cy="50" r="45"/>
+                    <circle class="circle-progress" id="remainingCircle" cx="50" cy="50" r="45"/>
+                </svg>
+                <div class="circle-text">
+                    <div class="metric-value" id="remainingKcal">0</div>
+                    <div class="metric-label">REMAINING</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <input type="number" id="goalInput" placeholder="Set daily goal (kcal)">
+            <button onclick="setGoal()">Update Goal</button>
+
+            <select id="mealType">
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="snack">Snack</option>
+                <option value="water">Water</option>
+            </select>
+
+            <input type="text" id="foodName" placeholder="Food/drink name">
+            
+            <div class="measurement-group">
+                <input type="number" id="amount" placeholder="Amount">
+                <select id="unit">
+                    <option value="g">g</option>
+                    <option value="ml">ml</option>
+                    <option value="cup">cups</option>
+                    <option value="oz">oz</option>
+                </select>
+            </div>
+
+            <input type="number" id="kcal" placeholder="kcal (0 for water)">
+            <button onclick="addEntry()">Add Entry</button>
+        </div>
+
+        <div class="meal-cards" id="mealCards"></div>
+        <button class="reset-btn" onclick="resetDay()">Reset Day</button>
+
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <h3>Edit Entry</h3>
+                <select id="editMealType">
+                    <option value="breakfast">Breakfast</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option>
+                    <option value="snack">Snack</option>
+                    <option value="water">Water</option>
+                </select>
+                <input type="text" id="editFoodName" placeholder="Food/drink name">
+                <div class="measurement-group">
+                    <input type="number" id="editAmount" placeholder="Amount">
+                    <select id="editUnit">
+                        <option value="g">g</option>
+                        <option value="ml">ml</option>
+                        <option value="cup">cups</option>
+                        <option value="oz">oz</option>
+                    </select>
+                </div>
+                <input type="number" id="editKcal" placeholder="kcal">
+                <button onclick="saveEditedEntry()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appData = {
+            goal: 0,
+            consumed: 0,
+            entries: []
+        };
+        let editingIndex = null;
+
+        function init() {
+            const savedData = localStorage.getItem('calTrackData');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    appData = {
+                        goal: Number(parsed.goal) || 0,
+                        consumed: Number(parsed.consumed) || 0,
+                        entries: parsed.entries || []
+                    };
+                } catch {
+                    localStorage.removeItem('calTrackData');
+                }
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const remaining = Math.max(appData.goal - appData.consumed, 0);
+            const circumference = 2 * Math.PI * 45;
+            
+            const consumedPercentage = appData.goal > 0 
+                ? Math.min(appData.consumed / appData.goal, 1)
+                : 0;
+            
+            const remainingPercentage = appData.goal > 0
+                ? remaining / appData.goal
+                : 0;
+
+            document.getElementById('consumedCircle').style.strokeDasharray = 
+                `${circumference * consumedPercentage} ${circumference}`;
+            
+            document.getElementById('remainingCircle').style.strokeDasharray = 
+                `${circumference * remainingPercentage} ${circumference}`;
+
+            document.getElementById('consumedKcal').textContent = appData.consumed;
+            document.getElementById('goalKcal').textContent = appData.goal;
+            document.getElementById('remainingKcal').textContent = remaining;
+
+            const mealCards = document.getElementById('mealCards');
+            mealCards.innerHTML = appData.entries.map((entry, index) => `
+                <div class="meal-card">
+                    <div class="meal-actions">
+                        <button class="edit-btn" onclick="openEditModal(${index})"✏️</button>
+                        <button class="delete-btn" onclick="deleteEntry(${index})">🗑️</button>
+                    </div>
+                    <div style="color: var(--secondary)">${entry.mealType.toUpperCase()}</div>
+                    <div>${entry.name} - ${entry.amount}${entry.unit}</div>
+                    <div style="color: var(--primary); margin-top: 8px;">${entry.kcal} kcal</div>
+                </div>
+            `).join('');
+        }
+
+        function setGoal() {
+            const input = document.getElementById('goalInput');
+            const newGoal = parseInt(input.value);
+            if (!isNaN(newGoal)) {
+                appData.goal = newGoal;
+                input.value = '';
+                saveAndUpdate();
+            }
+        }
+
+        function addEntry() {
+            const entry = {
+                mealType: document.getElementById('mealType').value,
+                name: document.getElementById('foodName').value.trim(),
+                amount: document.getElementById('amount').value.trim(),
+                unit: document.getElementById('unit').value,
+                kcal: parseInt(document.getElementById('kcal').value) || 0,
+                timestamp: new Date().toISOString()
+            };
+
+            if (!entry.name || !entry.amount) return;
+
+            if (entry.mealType === 'water') entry.kcal = 0;
+
+            appData.consumed += entry.kcal;
+            appData.entries.push(entry);
+            clearInputs();
+            saveAndUpdate();
+        }
+
+        function resetDay() {
+            appData.consumed = 0;
+            appData.entries = [];
+            saveAndUpdate();
+        }
+
+        function saveAndUpdate() {
+            localStorage.setItem('calTrackData', JSON.stringify(appData));
+            updateDisplay();
+        }
+
+        function clearInputs() {
+            document.getElementById('foodName').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('kcal').value = '';
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
